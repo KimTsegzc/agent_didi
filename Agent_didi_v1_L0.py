@@ -26,15 +26,15 @@ from openai import OpenAI
 from playsound import playsound
 import speech_recognition as sr
 from pathlib import Path
+import L0_baidu_AI as baidu
 import base64
 import os
 
 
-
 def L0_OpenAI_chat(prompt):
-    if source == "OpenAI":
+    if O_source == "OpenAI" or O_source == "Nuwa":
         model = "gpt-4o"
-    elif source == "Kimi":
+    elif O_source == "Kimi":
         model = "moonshot-v1-32k"
     completion = client.chat.completions.create(
         model=model,
@@ -54,9 +54,13 @@ def encode_image(image_path):
 
 
 def L0_OpenAI_VL(prompt, url):
+    if O_source == "OpenAI" or O_source == "Nuwa":
+        model = "gpt-4o-mini"
+    elif O_source == "Kimi":
+        model = "moonshot-v1-8k-vision-preview"
     base64_image = encode_image(url)
     chat = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=model,
         messages=[
             {
                 "role": "user",
@@ -76,20 +80,23 @@ def L0_OpenAI_VL(prompt, url):
     return chat.choices[0].message.content
 
 
-def L0_TTS(text, filename):
+def L0_TTS(text, filename, src="Baidu"):
     print("[L0]>> Converting text to audio")
     speech_file_path = Path(__file__).parent / filename
-    with client.audio.speech.with_streaming_chat.create(
-        model="tts-1",
-        voice="alloy",
-        input=text,
-        speed=1.3,
-    ) as chat:
-        chat.stream_to_file(speech_file_path)
+    if src == "OpenAI":
+        with client.audio.speech.with_streaming_chat.create(
+            model="tts-1",
+            voice="alloy",
+            input=text,
+            speed=1.3,
+        ) as chat:
+            chat.stream_to_file(speech_file_path)
+    elif src == "Baidu":
+        baidu.L0_Baidu_TTS(text, filename)
 
 
 def L0_TTS_speak(text, filename="./media/output.mp3"):
-    L0_TTS(text, filename)
+    L0_TTS(text, filename, src="Baidu")
     print("[L0]>> Playing audio")
     playsound(filename)
 
@@ -97,10 +104,10 @@ def L0_TTS_speak(text, filename="./media/output.mp3"):
 def L0_STT_listening(lng='zh-CN'):
     recognizer = sr.Recognizer()
     try:
-        with sr.Microphone() as source:
-            recognizer.adjust_for_ambient_noise(source)
+        with sr.Microphone() as mic:
+            recognizer.adjust_for_ambient_noise(mic)
             print("[L0]>> Listening...")
-            audio = recognizer.listen(source)
+            audio = recognizer.listen(mic)
             print("[L0]>> Recognizing...")
             text = recognizer.recognize_google(audio, language=lng)
             print(f"[L0]>> Transcription: {text}")
@@ -112,31 +119,35 @@ def L0_STT_listening(lng='zh-CN'):
     except Exception as e:
         print(f"[L0]!! An error occurred: {e}")
     return None
-    
+
 
 def init(src):
     global client
-    global source, key, url
-    source = src
-    if source == "OpenAI":
+    global O_source, key, url
+    O_source = src
+    if O_source == "OpenAI":
         url = "https://api.openai.com/v1"
-        key = 'sk-FTuSJsDw564gcsMHjUN0RaDBo3n6S8Qs2JVw23mZlCJnTqVW'
-    elif source == "Kimi":
+        key = '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'
+    elif O_source == "Kimi":
         url = "https://api.moonshot.cn/v1"
         key = 'sk-FTuSJsDw564gcsMHjUN0RaDBo3n6S8Qs2JVw23mZlCJnTqVW'
-    elif source == "Nuwa":
+    elif O_source == "Nuwa":
         url = "https://api.nuwaapi.com/v1"
         key = 'sk-oxirYGNoyv0otJJZiIS6iB9zdmyjVr3KbKdd5WTQMQfsYjr8'
     else:
-        raise ValueError(f"Unknown source: {source}")
+        raise ValueError(f"Unknown O_source: {O_source}")
     client = OpenAI(
         api_key=key,
         base_url=url,
     )
+    # -----------Baidu API info-----------
+    API_KEY = 'syWLArnalaUQEGzh8YawpjMP'
+    SECRET_KEY = 'R6pjTuDkyO2t5RDwodvgo48L8cRY7HJM'
  
 
 if __name__ == "__main__":
-    init(source="Kimi")
+    init("Kimi")
     human_input = L0_STT_listening()
     ai_chat = L0_OpenAI_chat(human_input)
+    print(f"[L0]>> AI response: {ai_chat}")
     L0_TTS_speak(ai_chat)
