@@ -22,7 +22,7 @@ Layers explanation:
 
 from playsound import playsound
 import speech_recognition as sr
-from pathlib import Path
+
 import L0_baidu_AI as baidu
 import L0_OpenAI as openai
 

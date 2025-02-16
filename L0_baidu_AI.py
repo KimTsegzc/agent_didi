@@ -40,9 +40,9 @@ def get_file_content_as_base64(path, urlencoded=False):
 
 
 def L0_Baidu_STT(audio_file):
+    # 有点问题，报:json param speech error.
     url = "https://vop.baidu.com/server_api"
     base64_audio = get_file_content_as_base64(audio_file)
-    playsound(audio_file)
     body = json.dumps({
         "format": "m4a",
         "rate": 16000,
@@ -67,7 +67,7 @@ def L0_Baidu_STT(audio_file):
     # print(response.json()['result'][0])
     
 
-def L0_Baidu_TTS(tex, filename="baidu_tts_output.mp3"):
+def L0_Baidu_TTS(tex, filename="./media/baidu_tts_output.mp3"):
     url = "https://tsn.baidu.com/text2audio"
     access_token = get_access_token()
     body = {
@@ -78,8 +78,8 @@ def L0_Baidu_TTS(tex, filename="baidu_tts_output.mp3"):
         'lan': 'zh',
         'spd': 7,
         'pit': 5,
-        'vol': 5,
-        'per': 110,
+        'vol': 6,
+        'per': 5118,
         'aue': 3
     }
     headers = {
@@ -98,7 +98,7 @@ def L0_Baidu_TTS(tex, filename="baidu_tts_output.mp3"):
 
 if __name__ == '__main__':
     # L0_Baidu_TTS("您有新的美团外卖订单！请及时处理。")
-    # L0_Baidu_TTS("滴滴司机您好，您的订单已经被接单，请尽快前往乘客位置。")
+    L0_Baidu_TTS("滴滴司机您好，您的订单已经被接单，请尽快前往乘客位置。")
+    playsound("./media/baidu_tts_output.mp3")
     # L0_Baidu_STT("./media/output.mp3")
-    L0_Baidu_STT("./baidu_tts_output.mp3")
     # get_access_token()
