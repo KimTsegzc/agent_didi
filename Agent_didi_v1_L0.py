@@ -1,18 +1,43 @@
+"""
+Project: Agent_didi
+Purpose: AI agent Calling service from didiglobal.com
+Author: KimtseGZC
+Date: 16Feb2025
+Version: 1.0
+Layer: [L0]
+--------------------------------
+Statement of [L0]
+offers I/O for human interaction, includes:
+(1) tts
+(2) stt
+(3) AI capabilities - openAI
+(4) AI capabilities - Baidu
+--------------------------------
+Layers explanation:
+[L0] - I/O interface layer
+[L1] - phone interaction layer
+[L2] - event handling layer
+[L3] - service calling layer
+"""
+
+
+import openai
 from openai import OpenAI
-from gtts import gTTS
 from playsound import playsound
-import pygetwindow as gw
 import speech_recognition as sr
-import pyautogui
-import time
 from pathlib import Path
-import keyboard
 import base64
 import os
 
-def get_openai_response(prompt):
+
+
+def L0_OpenAI_chat(prompt):
+    if source == "OpenAI":
+        model = "gpt-4o"
+    elif source == "Kimi":
+        model = "moonshot-v1-32k"
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=model,
         messages=[
             {
                 "role": "user",
@@ -28,9 +53,9 @@ def encode_image(image_path):
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 
-def get_openai_vl(prompt, url):
+def L0_OpenAI_VL(prompt, url):
     base64_image = encode_image(url)
-    response = client.chat.completions.create(
+    chat = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
             {
@@ -48,127 +73,70 @@ def get_openai_vl(prompt, url):
         ],
         max_tokens=300,
     )
-    return response.choices[0].message.content
+    return chat.choices[0].message.content
 
 
-def text_to_audio(text, filename="output.mp3"):
-    print(">> Converting text to audio")
-    # tts = gTTS(text=text, lang='zh')
-    # tts.save(filename)
+def L0_TTS(text, filename):
+    print("[L0]>> Converting text to audio")
     speech_file_path = Path(__file__).parent / filename
-    with client.audio.speech.with_streaming_response.create(
+    with client.audio.speech.with_streaming_chat.create(
         model="tts-1",
         voice="alloy",
         input=text,
         speed=1.3,
-    ) as response:
-        response.stream_to_file(speech_file_path)
-    print(">> Playing audio")
+    ) as chat:
+        chat.stream_to_file(speech_file_path)
+
+
+def L0_TTS_speak(text, filename="./media/output.mp3"):
+    L0_TTS(text, filename)
+    print("[L0]>> Playing audio")
     playsound(filename)
 
 
-def switch_to_app_and_snapshot(app_name, snapshot_filename="snapshot.png"):
-    # Find the window with the specified name
-    windows = gw.getWindowsWithTitle(app_name)
-    if windows:
-        app_window = windows[0]
-        # Activate the window
-        app_window.activate()
-        time.sleep(1)
-        # Take a screenshot of the window
-        screenshot = pyautogui.screenshot(region=(
-            app_window.left,
-            app_window.top,
-            app_window.width,
-            app_window.height
-        ))
-        # Save the screenshot
-        screenshot.save(snapshot_filename)
-        print(f"Snapshot saved as {snapshot_filename}")
-        return {
-            "x": app_window.left,
-            "y": app_window.top,
-            "width": app_window.width,
-            "height": app_window.height
-        }
-    else:
-        print(f"No window found with title containing '{app_name}'")
-
-
-def listen_and_transcribe():
+def L0_STT_listening(lng='zh-CN'):
     recognizer = sr.Recognizer()
     try:
         with sr.Microphone() as source:
-            print("Microphone initialized.")
             recognizer.adjust_for_ambient_noise(source)
-            print("Listening...")
+            print("[L0]>> Listening...")
             audio = recognizer.listen(source)
-            print("Recognizing...")
-            text = recognizer.recognize_google(audio, language='zh-CN')
-            print(f"Transcription: {text}")
+            print("[L0]>> Recognizing...")
+            text = recognizer.recognize_google(audio, language=lng)
+            print(f"[L0]>> Transcription: {text}")
             return text
     except sr.UnknownValueError:
-        print("Google Speech Recognition could not understand audio")
+        print("[L0]!! Google could not understand.")
     except sr.RequestError as e:
-        print(f"Could not request results from Google Speech Recognition service; {e}")
+        print(f"[L0]!! Could not request from Google; {e}")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"[L0]!! An error occurred: {e}")
     return None
     
 
-def init():
+def init(src):
     global client
-    key = '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'
-    client = OpenAI(api_key=key)
-
-
-def click_at_coordinates(p):
-    pyautogui.click(p['x'], p['y'])
-    print(f"Clicked at ({p['x']}, {p['y']})")
-    time.sleep(1)
-
-
-def type_in_text(text):
-    keyboard.write(text)
-    print(f"Typed text: {text}")
-    time.sleep(1)
-
-
-def nposi(dx, dy):
-    return {"x": posi["x"] + dx, "y": posi["y"] + dy}
-
-
-def call_service(from_pos, to_pos):
-    mid_dx = posi["width"] // 2
-    third_dx = posi["width"] // 3
-    p_from = nposi(mid_dx, 470)
-    p_to = nposi(third_dx, 530)
-    p_top = nposi(mid_dx, 110)
-    p_first_select = nposi(mid_dx, 230)
-    p_home = nposi(130, 210)
-    p_back = nposi(30, 56)
-    click_at_coordinates(p_from)
-    click_at_coordinates(p_home)
-    click_at_coordinates(p_to)
-    click_at_coordinates(p_top)
-    type_in_text('天德广场')
-    click_at_coordinates(p_first_select)
-    time.sleep(2)
+    global source, key, url
+    source = src
+    if source == "OpenAI":
+        url = "https://api.openai.com/v1"
+        key = 'sk-FTuSJsDw564gcsMHjUN0RaDBo3n6S8Qs2JVw23mZlCJnTqVW'
+    elif source == "Kimi":
+        url = "https://api.moonshot.cn/v1"
+        key = 'sk-FTuSJsDw564gcsMHjUN0RaDBo3n6S8Qs2JVw23mZlCJnTqVW'
+    elif source == "Nuwa":
+        url = "https://api.nuwaapi.com/v1"
+        key = 'sk-oxirYGNoyv0otJJZiIS6iB9zdmyjVr3KbKdd5WTQMQfsYjr8'
+    else:
+        raise ValueError(f"Unknown source: {source}")
+    client = OpenAI(
+        api_key=key,
+        base_url=url,
+    )
+ 
 
 if __name__ == "__main__":
-    init()
-    # human_input = listen_and_transcribe()
-    human_input = '从家里打车去天德广场'
-    posi = switch_to_app_and_snapshot("滴滴")
-    # call_service('家', '天德广场')
-
-    prompt = '这是一个打车软件，用户刚完成订单输入'
-    prompt += '请先用一句话介绍目前选中服务，应答时间、价格、里程、行程时间'
-    prompt += '然后依次介绍各类服务价格'
-    prompt += '注意，各类价格精确到元即可，不用小数点后面的内容'
-    prompt += '不要开头和结尾的问候性回答，精简一点'
-    url = "./snapshot.png"
-    switch_to_app_and_snapshot("滴滴")
-    response = get_openai_vl(prompt, url).replace('*', '')
-    print(response)
-    text_to_audio(response)
+    init(source="Kimi")
+    human_input = L0_STT_listening()
+    ai_chat = L0_OpenAI_chat(human_input)
+    L0_TTS_speak(ai_chat)
