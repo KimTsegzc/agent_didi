@@ -8,10 +8,11 @@ Layer: [L0]
 --------------------------------
 Statement of [L0]
 offers I/O for human interaction, includes:
-(1) AI capabilities - openAI
+(1) AI capabilities - OpenAI
 (2) AI capabilities - Baidu
 (3) Mic
 (4) Speaker
+(5) LBS
 --------------------------------
 Layers explanation:
 [L0] - I/O interface layer
@@ -25,6 +26,7 @@ import speech_recognition as sr
 
 import L0_baidu_AI as baidu
 import L0_OpenAI as openai
+import L0_gaode_LBS as gaode
 
 
 def L0_TTS(text, filename, src="Baidu"):
@@ -43,6 +45,8 @@ def L0_TTS_speak(text, filename="./media/output.mp3"):
 
 def L0_STT_listening(lng='zh-CN'):
     recognizer = sr.Recognizer()
+    recognizer.energy_threshold = 1000  
+    recognizer.dynamic_energy_threshold = True  
     try:
         with sr.Microphone() as mic:
             recognizer.adjust_for_ambient_noise(mic)
@@ -62,7 +66,8 @@ def L0_STT_listening(lng='zh-CN'):
 
 
 if __name__ == "__main__":
-    human_input = L0_STT_listening()
-    ai_chat = openai.L0_OpenAI_chat(human_input)
-    print(f"[L0]>> AI response: {ai_chat}")
-    L0_TTS_speak(ai_chat)
+    # human_input = L0_STT_listening()
+    # ai_chat = openai.L0_OpenAI_chat(human_input)
+    # print(f"[L0]>> AI response: {ai_chat}")
+    # L0_TTS_speak(ai_chat)
+    print(gaode.L0_LBS_L2A(113.323, 23.124))

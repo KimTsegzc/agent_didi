@@ -22,77 +22,30 @@ L3 - service calling layer
 """
 
 
-from openai import OpenAI
-from gtts import gTTS
-from playsound import playsound
 import pygetwindow as gw
-import speech_recognition as sr
 import pyautogui
 import time
 from pathlib import Path
 import keyboard
-import base64
-import os
+
+import Agent_didi_v1_L0 as L0
+import L0_baidu_AI as baidu
+import L0_OpenAI as openai
 
 
-def get_openai_response(prompt):
-    completion = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-    return completion.choices[0].message.content
+def L1_regist_icons():
+    global posi, p_from, p_home, p_office, p_to, p_top, p_first_select
+    mid_dx = posi["width"] // 2
+    third_dx = posi["width"] // 3
+    p_from = nposi(mid_dx, 470)
+    p_home = nposi(130, 210)
+    p_office = nposi(350, 210)
+    p_to = nposi(third_dx, 530)
+    p_top = nposi(mid_dx, 110)
+    p_first_select = nposi(mid_dx, 230)
 
 
-def encode_image(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode("utf-8")
-
-
-def get_openai_vl(prompt, url):
-    base64_image = encode_image(url)
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}",
-                        },
-                    },
-                ],
-            }
-        ],
-        max_tokens=300,
-    )
-    return response.choices[0].message.content
-
-
-def text_to_audio(text, filename="output.mp3"):
-    print(">> Converting text to audio")
-    # tts = gTTS(text=text, lang='zh')
-    # tts.save(filename)
-    speech_file_path = Path(__file__).parent / filename
-    with client.audio.speech.with_streaming_response.create(
-        model="tts-1",
-        voice="alloy",
-        input=text,
-        speed=1.3,
-    ) as response:
-        response.stream_to_file(speech_file_path)
-    print(">> Playing audio")
-    playsound(filename)
-
-
-def switch_to_app_and_snapshot(app_name, snapshot_filename="snapshot.png"):
+def switch_n_shot(app_name, snapshot_filename="./media/snapshot.png"):
     # Find the window with the specified name
     windows = gw.getWindowsWithTitle(app_name)
     if windows:
@@ -120,33 +73,6 @@ def switch_to_app_and_snapshot(app_name, snapshot_filename="snapshot.png"):
         print(f"No window found with title containing '{app_name}'")
 
 
-def listen_and_transcribe():
-    recognizer = sr.Recognizer()
-    try:
-        with sr.Microphone() as source:
-            print("Microphone initialized.")
-            recognizer.adjust_for_ambient_noise(source)
-            print("Listening...")
-            audio = recognizer.listen(source)
-            print("Recognizing...")
-            text = recognizer.recognize_google(audio, language='zh-CN')
-            print(f"Transcription: {text}")
-            return text
-    except sr.UnknownValueError:
-        print("Google Speech Recognition could not understand audio")
-    except sr.RequestError as e:
-        print(f"Could not request results from Google Speech Recognition service; {e}")
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    return None
-    
-
-def init():
-    global client
-    key = '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'
-    client = OpenAI(api_key=key)
-
-
 def click_at_coordinates(p):
     pyautogui.click(p['x'], p['y'])
     print(f"Clicked at ({p['x']}, {p['y']})")
@@ -163,37 +89,69 @@ def nposi(dx, dy):
     return {"x": posi["x"] + dx, "y": posi["y"] + dy}
 
 
-def call_service(from_pos, to_pos):
-    mid_dx = posi["width"] // 2
-    third_dx = posi["width"] // 3
-    p_from = nposi(mid_dx, 470)
-    p_to = nposi(third_dx, 530)
-    p_top = nposi(mid_dx, 110)
-    p_first_select = nposi(mid_dx, 230)
-    p_home = nposi(130, 210)
-    p_back = nposi(30, 56)
+def L1_fillin_from(from_pos):
     click_at_coordinates(p_from)
-    click_at_coordinates(p_home)
+    if from_pos in ['家', '家里']:
+        click_at_coordinates(p_home)
+    elif from_pos in ['公司', '办公室']:
+        click_at_coordinates(p_office)
+    else:
+        click_at_coordinates(p_top)
+        type_in_text(from_pos)
+        click_at_coordinates(p_first_select)
+
+
+def L1_fillin_to(to_pos):
     click_at_coordinates(p_to)
-    click_at_coordinates(p_top)
-    type_in_text('天德广场')
-    click_at_coordinates(p_first_select)
-    time.sleep(2)
+    if to_pos in ['家', '家里']:
+        click_at_coordinates(p_home)
+    elif to_pos in ['公司', '办公室']:
+        click_at_coordinates(p_office)
+    else:
+        click_at_coordinates(p_top)
+        type_in_text(to_pos)
+        click_at_coordinates(p_first_select)
 
-if __name__ == "__main__":
-    init()
-    # human_input = listen_and_transcribe()
-    human_input = '从家里打车去天德广场'
-    posi = switch_to_app_and_snapshot("滴滴")
-    # call_service('家', '天德广场')
 
+def L1_pmpt_parse_from_to(human_input):
+    # 根据用户需求，解析出发地和目的地
+    prompt = '用户需求是：' + human_input + '。'
+    prompt += '\n请从需求里区分出发地和目的地，用from=, to=, 来表示。'
+    prompt += '\n中间用|分开。'
+    response = openai.L0_OpenAI_chat(prompt)
+    print('[L1]>> AI response: ', response)
+    from_pos = response.split('from=')[1].split('|')[0]
+    to_pos = response.split('to=')[1].split('|')[0]
+    print('[L1]>> parsing from_pos: ', from_pos)
+    print('[L1]>> parsing to_pos: ', to_pos)
+    return from_pos, to_pos
+
+
+def L1_pmpt_parse_service():
+    # 根据页面信息，解析出服务信息
     prompt = '这是一个打车软件，用户刚完成订单输入'
     prompt += '请先用一句话介绍目前选中服务，应答时间、价格、里程、行程时间'
     prompt += '然后依次介绍各类服务价格'
     prompt += '注意，各类价格精确到元即可，不用小数点后面的内容'
     prompt += '不要开头和结尾的问候性回答，精简一点'
-    url = "./snapshot.png"
-    switch_to_app_and_snapshot("滴滴")
-    response = get_openai_vl(prompt, url).replace('*', '')
-    print(response)
-    text_to_audio(response)
+    url = "./media/snapshot.png"
+    switch_n_shot("滴滴")
+    print('[L1]>> parsing service info...')
+    response = openai.L0_OpenAI_VL(prompt, url).replace('*', '')
+    return response
+
+
+if __name__ == "__main__":
+    human_input = L0.L0_STT_listening()
+    from_pos, to_pos = L1_pmpt_parse_from_to(human_input)    
+
+    posi = switch_n_shot("滴滴")
+    L1_regist_icons()
+    
+    L1_fillin_from(from_pos)
+    L1_fillin_to(to_pos)
+    time.sleep(2)
+
+    service = L1_pmpt_parse_service()
+    print(service)
+    L0.L0_TTS_speak(service)

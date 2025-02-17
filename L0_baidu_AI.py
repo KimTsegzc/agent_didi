@@ -68,6 +68,7 @@ def L0_Baidu_STT(audio_file):
     
 
 def L0_Baidu_TTS(tex, filename="./media/baidu_tts_output.mp3"):
+    print("[L0]>> Baidu TTS working...")
     url = "https://tsn.baidu.com/text2audio"
     access_token = get_access_token()
     body = {
