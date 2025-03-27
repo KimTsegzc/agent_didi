@@ -34,63 +34,7 @@ import keyboard
 import base64
 import os
 
-
-def get_openai_response(prompt):
-    completion = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-    return completion.choices[0].message.content
-
-
-def encode_image(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode("utf-8")
-
-
-def get_openai_vl(prompt, url):
-    base64_image = encode_image(url)
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}",
-                        },
-                    },
-                ],
-            }
-        ],
-        max_tokens=300,
-    )
-    return response.choices[0].message.content
-
-
-def text_to_audio(text, filename="output.mp3"):
-    print(">> Converting text to audio")
-    # tts = gTTS(text=text, lang='zh')
-    # tts.save(filename)
-    speech_file_path = Path(__file__).parent / filename
-    with client.audio.speech.with_streaming_response.create(
-        model="tts-1",
-        voice="alloy",
-        input=text,
-        speed=1.3,
-    ) as response:
-        response.stream_to_file(speech_file_path)
-    print(">> Playing audio")
-    playsound(filename)
-
+from L0_OpenAI import L0_OpenAI_VL, L0_OpenAI_TTS, L0_OpenAI_chat
 
 def switch_to_app_and_snapshot(app_name, snapshot_filename="snapshot.png"):
     # Find the window with the specified name
@@ -172,20 +116,28 @@ def call_service(from_pos, to_pos):
     p_first_select = nposi(mid_dx, 230)
     p_home = nposi(130, 210)
     p_back = nposi(30, 56)
-    click_at_coordinates(p_from)
+    if "家" in from_pos:
+        click_at_coordinates(p_from)
     click_at_coordinates(p_home)
     click_at_coordinates(p_to)
     click_at_coordinates(p_top)
-    type_in_text('天德广场')
+    type_in_text(to_pos)
     click_at_coordinates(p_first_select)
     time.sleep(2)
 
 if __name__ == "__main__":
     init()
-    # human_input = listen_and_transcribe()
-    human_input = '从家里打车去天德广场'
+    human_input = listen_and_transcribe()
+    # human_input = '从家里打车去天德广场'
     posi = switch_to_app_and_snapshot("滴滴")
-    # call_service('家', '天德广场')
+    prompt = '这是一句用户从出发地到目的地的描述，请提取出出发地和目的地'
+    prompt += '注意严格按照出发地=，目的地='
+    prompt += '单行单句，不要有问候性回答，用户的描述是：'
+    prompt += human_input
+
+    response = L0_OpenAI_chat(prompt)
+    print(response)
+    call_service('家', '天德广场')
 
     prompt = '这是一个打车软件，用户刚完成订单输入'
     prompt += '请先用一句话介绍目前选中服务，应答时间、价格、里程、行程时间'
@@ -194,6 +146,7 @@ if __name__ == "__main__":
     prompt += '不要开头和结尾的问候性回答，精简一点'
     url = "./snapshot.png"
     switch_to_app_and_snapshot("滴滴")
-    response = get_openai_vl(prompt, url).replace('*', '')
+    response = L0_OpenAI_VL(prompt, url).replace('*', '')
     print(response)
-    text_to_audio(response)
+    L0_OpenAI_TTS(response)
+    playsound('./media/output.mp3')

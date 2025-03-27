@@ -31,7 +31,7 @@ def init(src):
 def L0_OpenAI_chat(prompt, model = "gpt-4o"):
     if O_src == "aliyuncs":
         model = "deepseek-r1-distill-qwen-32b"
-    print(f"[L0]: OpenAI chat with {model}...")
+    # print(f"[L0]: OpenAI chat with {model}...")
     completion = client.chat.completions.create(
         model=model,
         messages=[
@@ -53,7 +53,7 @@ def L0_OpenAI_VL(prompt, pic, model = "gpt-4o-mini"):
     base64_image = encode_image(pic)
     if O_src == "aliyuncs":
         model = "qwen-vl-max-latest"
-    print(f"[L0]: OpenAI VL with {model}...")
+    # print(f"[L0]: OpenAI VL with {model}...")
     chat = client.chat.completions.create(
         model=model,
         messages=[
